@@ -62,29 +62,63 @@ def get_arguments():
 def read_fasta(fasta_file):
     """Extract the complete genome sequence as a single string
     """
-    pass
+    with open(fasta_file, "r") as  file:
+        sequence = ""
+        for line in file:
+            if line[0] == '>':
+                continue
+            else :
+                sequence += line.strip()
+        return sequence
 
 def find_start(start_regex, sequence, start, stop):
     """Find the start codon
     """
-    pass
+    if start_regex.search(sequence, start, stop):
+        return start_regex.search(sequence, start, stop).start(0)
 
 
 def find_stop(stop_regex, sequence, start):
     """Find the stop codon
     """
-    pass
+    for i in stop_regex.finditer(sequence, start):    
+        if i.start(0) != None:
+            if (i.start(0) - start) %3 == 0:
+                return i.start(0)
 
 def has_shine_dalgarno(shine_regex, sequence, start, max_shine_dalgarno_distance):
     """Find a shine dalgarno motif before the start codon
     """
-    pass
+    pos2 = max(0, start - max_shine_dalgarno_distance)
+    match = shine_regex.finditer(sequence, pos2, start)
+    pos1 = start - 6
+    for i in match:
+        if pos1 > i.end(0):
+            return True
+    return False
 
 def predict_genes(sequence, start_regex, stop_regex, shine_regex, 
                   min_gene_len, max_shine_dalgarno_distance, min_gap):
     """Predict most probable genes
     """
-    pass
+    pos = 0
+    list_gene = []
+    while len(sequence) - pos >= min_gap:
+        pos = find_start(start_regex, sequence, pos, len(sequence))
+        if pos != None:
+            stop = find_stop(stop_regex, sequence, pos)
+            if stop != None:
+                if (stop - pos) >= min_gene_len:
+                    if has_shine_dalgarno(shine_regex, sequence, pos, max_shine_dalgarno_distance) == True:
+                        list_gene.append([pos + 1, stop + 3])
+                        pos = stop + 2 + min_gap
+                    else:
+                        pos = pos +1
+                else:
+                    pos = pos +1
+            else:
+                 pos = pos +1
+    return list_gene
 
 
 def write_genes_pos(predicted_genes_file, probable_genes):
